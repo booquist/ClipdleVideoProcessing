@@ -2,8 +2,9 @@ const express = require('express');
 const multer = require('multer');
 const ffmpeg = require('fluent-ffmpeg');
 
-const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
+
+const router = express.Router();
 
 router.post('/extract-frames', async (req: { file: { path: any; }; body: { frameNumber: any; }; }, res: { status: (arg0: number) => { (): any; new(): any; send: { (arg0: string): void; new(): any; }; }; json: (arg0: { frames: string[]; }) => void; }) => {
     if (!req.file) {
