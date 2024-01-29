@@ -7,7 +7,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "./dist",
-    "lib": ["ES2020", "ESNext.AsyncIterable"],
+    "lib": ["ES2020", "ESNext.AsyncIterable", "es6"],
     "types": ["node"],
     
   },

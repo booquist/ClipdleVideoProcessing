@@ -6,6 +6,7 @@ const uuidv4 = require('uuid').v4;
 const { exec } = require('child_process');
 const keyFilePath = './agile-bonbon-403122-7dc5bb47ff54.json';
 const gcStorage = new Storage({ keyFilename: keyFilePath });
+const router = express.Router();
 const videosBucketName = 'clipdle_temp_videos';
 const imagesBucketName = 'clipdle-profile-pics';
 const thumbnailBucketName = 'clipdle_videos_thumbnails';
@@ -172,9 +173,33 @@ async function createAndUploadThumbnail(videoFilePath, videoId) {
         });
     });
 }
-module.exports = {
-    uploadVideoToGCS,
-    uploadProfilePictureToGCS,
-    deleteProfilePictureFromGCS,
-    createAndUploadThumbnail
-};
+// Function to handle video uploads
+async function handleVideoUpload(req, res) {
+    try {
+        const file = req.file; // Assuming file is passed in request
+        const response = await uploadVideoToGCS(file);
+        res.json(response);
+    }
+    catch (error) {
+        console.error('Error in handleVideoUpload:', error);
+        res.status(500).send('Internal server error');
+    }
+}
+// Function to handle profile picture uploads
+async function handleProfilePictureUpload(req, res) {
+    try {
+        const file = req.file; // Assuming file is passed in request
+        const username = req.body.username; // Assuming username is passed in request body
+        const url = await uploadProfilePictureToGCS(file, username);
+        res.json({ url });
+    }
+    catch (error) {
+        console.error('Error in handleProfilePictureUpload:', error);
+        res.status(500).send('Internal server error');
+    }
+}
+// Define your routes
+router.post('/upload-video', handleVideoUpload);
+router.post('/upload-profile-picture', handleProfilePictureUpload);
+// Export the router
+module.exports = router;
