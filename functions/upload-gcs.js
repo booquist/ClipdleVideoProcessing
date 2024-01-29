@@ -227,8 +227,8 @@ async function handleProfilePictureUpload(req, res) {
 }
 
 // Define your routes
-uploadGcsRouter.post('/upload-video', handleVideoUpload);
-uploadGcsRouter.post('/upload-profile-picture', handleProfilePictureUpload);
+router.post('/upload-video', handleVideoUpload);
+router.post('/upload-profile-picture', handleProfilePictureUpload);
 
-// Export the uploadGcsRouter
-module.exports = uploadGcsRouter;
+// Export the router
+module.exports = router;
