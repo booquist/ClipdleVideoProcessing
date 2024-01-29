@@ -11,8 +11,8 @@ app.use(express.json());
 const PORT = process.env.PORT || 3000;
 
 // Use the video processing route
-app.use('/', extractThumbnailRoute);
-app.use('/', uploadRoute);
+app.use('/extract-frames', extractThumbnailRoute);
+app.use('/upload-gcs', uploadRoute);
 
 app.listen(PORT, () => {
     console.log(`Video processing server is running on port ${PORT}`);
