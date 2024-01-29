@@ -4,8 +4,8 @@ const sharp = require('sharp');
 const uuidv4 = require('uuid').v4;
 const { exec } = require('child_process');
 
-const express = require('express');
-const router = express.Router();
+const uploadGcsExpress = require('uploadGcsExpress');
+const uploadGcsRouter = uploadGcsExpress.uploadGcsuploadGcsRouter();
 
 const keyFilePath = './agile-bonbon-403122-7dc5bb47ff54.json';
 const gcStorage = new Storage({ keyFilename: keyFilePath });
@@ -227,8 +227,8 @@ async function handleProfilePictureUpload(req: { file: any; body: { username: an
 }
 
 // Define your routes
-router.post('/upload-video', handleVideoUpload);
-router.post('/upload-profile-picture', handleProfilePictureUpload);
+uploadGcsRouter.post('/upload-video', handleVideoUpload);
+uploadGcsRouter.post('/upload-profile-picture', handleProfilePictureUpload);
 
-// Export the router
-module.exports = router;
+// Export the uploadGcsRouter
+module.exports = uploadGcsRouter;
