@@ -1,8 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 
-const extractThumbnailRoute = require('./dist/extract-frames');
-const uploadRoute = require('./dist/upload-gcs');
+const extractThumbnailRoute = require('./functions/extract-frames');
+const uploadRoute = require('./functions/upload-gcs');
 
 const app = express();
 app.use(cors());
