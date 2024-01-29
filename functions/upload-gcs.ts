@@ -198,9 +198,34 @@ async function createAndUploadThumbnail(videoFilePath: string, videoId: string):
     });
 }
 
-module.exports = {
-    uploadVideoToGCS,
-    uploadProfilePictureToGCS,
-    deleteProfilePictureFromGCS,
-    createAndUploadThumbnail
-};
+// Function to handle video uploads
+async function handleVideoUpload(req: { file: any; }, res: { json: (arg0: { filename: string; aspectRatio: string; }) => void; status: (arg0: number) => { (): any; new(): any; send: { (arg0: string): void; new(): any; }; }; }) {
+    try {
+        const file = req.file; // Assuming file is passed in request
+        const response = await uploadVideoToGCS(file);
+        res.json(response);
+    } catch (error) {
+        console.error('Error in handleVideoUpload:', error);
+        res.status(500).send('Internal server error');
+    }
+}
+
+// Function to handle profile picture uploads
+async function handleProfilePictureUpload(req: { file: any; body: { username: any; }; }, res: { json: (arg0: { url: string; }) => void; status: (arg0: number) => { (): any; new(): any; send: { (arg0: string): void; new(): any; }; }; }) {
+    try {
+        const file = req.file; // Assuming file is passed in request
+        const username = req.body.username; // Assuming username is passed in request body
+        const url = await uploadProfilePictureToGCS(file, username);
+        res.json({ url });
+    } catch (error) {
+        console.error('Error in handleProfilePictureUpload:', error);
+        res.status(500).send('Internal server error');
+    }
+}
+
+// Define your routes
+router.post('/upload-video', handleVideoUpload);
+router.post('/upload-profile-picture', handleProfilePictureUpload);
+
+// Export the router
+module.exports = router;
