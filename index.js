@@ -8,7 +8,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
+const PORT = 443; // 443 for HTTPS, 80 for HTTP
 
 // Use the video processing route
 app.use('/extract-frames', extractThumbnailRoute);
