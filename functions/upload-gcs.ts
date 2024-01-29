@@ -5,7 +5,7 @@ const uuidv4 = require('uuid').v4;
 const { exec } = require('child_process');
 
 const uploadGcsExpress = require('express');
-const uploadGcsRouter = uploadGcsExpress.router();
+const uploadGcsRouter = express.router();
 
 const keyFilePath = './agile-bonbon-403122-7dc5bb47ff54.json';
 const gcStorage = new Storage({ keyFilename: keyFilePath });
