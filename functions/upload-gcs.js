@@ -6,6 +6,8 @@ const { v4: uuidv4 } = require('uuid');
 const { exec } = require('child_process');
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' }); // configure multer
 
 const keyFilePath = './agile-bonbon-403122-7dc5bb47ff54.json';
 const gcStorage = new Storage({ keyFilename: keyFilePath });
@@ -227,7 +229,7 @@ async function handleProfilePictureUpload(req, res) {
 }
 
 // Define your routes
-router.post('/upload-video', handleVideoUpload);
+router.post('/upload-video', upload.single('video'), handleVideoUpload);
 router.post('/upload-profile-picture', handleProfilePictureUpload);
 
 // Export the router
