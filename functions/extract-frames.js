@@ -20,28 +20,36 @@ router.post('/extract-frames', upload.single('video'), async (req, res) => {
     const frameNumber = parseInt(req.body.frameNumber || "0", 10);
     const uniqueFolder = `thumbnails_${uuid.v4()}`;
 
-    // Ensure local directory for FFmpeg output exists
-    const localOutputDir = path.join(__dirname, 'extracted_frames', uniqueFolder);
-    if (!fs.existsSync(localOutputDir)) {
-        fs.mkdirSync(localOutputDir, { recursive: true });
+    // Get video duration
+    let videoDuration = 0;
+    try {
+        await new Promise((resolve, reject) => {
+            ffmpeg.ffprobe(videoPath, (err, metadata) => {
+                if (err) reject(err);
+                videoDuration = metadata.format.duration;
+                resolve();
+            });
+        });
+    } catch (error) {
+        console.error('Error getting video duration:', error);
+        return res.status(500).send('Failed to get video duration');
     }
 
+    const interval = videoDuration / frameNumber; // Calculate interval between frames
+
+    const frames = [];
     try {
-        const frames = [];
-
-        // Assuming a constant framerate for simplicity
-        const selectOption = `select=not(mod(n\\,10))`; // For example, take a frame every 10 frames
-        const scaleOption = `scale=-1:120`; // For example, scale the height to 120px and keep aspect ratio
-
-        for (let i = 1; i <= frameNumber; i++) {
-            const outputFilename = `thumb_${String(i).padStart(4, '0')}.png`;
-            const outputPath = path.join(localOutputDir, outputFilename);
+        for (let i = 0; i < frameNumber; i++) {
+            const timestamp = i * interval;
+            const outputFilename = `thumb_${String(i + 1).padStart(4, '0')}.png`;
+            const outputPath = path.join('/tmp', outputFilename); // Temporarily store in /tmp
 
             await new Promise((resolve, reject) => {
                 ffmpeg(videoPath)
-                    .outputOptions([`-vf ${selectOption},${scaleOption}`, `-vframes 1`])
+                    .seekInput(timestamp)
+                    .outputFrames(1)
                     .output(outputPath)
-                    .on('end', () => resolve(outputPath))
+                    .on('end', () => resolve())
                     .on('error', (err) => reject(err))
                     .run();
             });
@@ -53,15 +61,15 @@ router.post('/extract-frames', upload.single('video'), async (req, res) => {
             // Assuming public access, construct URL for each uploaded thumbnail
             const publicUrl = `https://storage.googleapis.com/${bucketName}/${destination}`;
             frames.push(publicUrl);
+
+            // Clean up local file
+            fs.unlinkSync(outputPath);
         }
 
         res.json({ frames });
     } catch (error) {
         console.error('Error processing video:', error);
         res.status(500).send('Error processing video');
-    } finally {
-        // Clean up local directory
-        fs.rmSync(localOutputDir, { recursive: true, force: true });
     }
 });
 
