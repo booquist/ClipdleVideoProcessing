@@ -27,20 +27,22 @@ router.post('/extract-frames', upload.single('video'), async (req, res) => {
     }
 
     try {
-        // Generate thumbnails using FFmpeg
+        const frames = [];
+
+        // Assuming a constant framerate for simplicity
+        const selectOption = `select=not(mod(n\\,10))`; // For example, take a frame every 10 frames
+        const scaleOption = `scale=-1:120`; // For example, scale the height to 120px and keep aspect ratio
+
         for (let i = 1; i <= frameNumber; i++) {
             const outputFilename = `thumb_${String(i).padStart(4, '0')}.png`;
             const outputPath = path.join(localOutputDir, outputFilename);
 
             await new Promise((resolve, reject) => {
                 ffmpeg(videoPath)
-                    .outputOptions([
-                        `-vf select='not(mod(n\\,${Math.floor(30/FPS)}))',scale=${WIDTH}:-1`, // Adjust for FPS and WIDTH as needed
-                        `-vframes 1`
-                    ])
+                    .outputOptions([`-vf ${selectOption},${scaleOption}`, `-vframes 1`])
                     .output(outputPath)
-                    .on('end', resolve)
-                    .on('error', reject)
+                    .on('end', () => resolve(outputPath))
+                    .on('error', (err) => reject(err))
                     .run();
             });
 
@@ -49,7 +51,8 @@ router.post('/extract-frames', upload.single('video'), async (req, res) => {
             await storage.bucket(bucketName).upload(outputPath, { destination });
 
             // Assuming public access, construct URL for each uploaded thumbnail
-            frames.push(`https://storage.googleapis.com/${bucketName}/${destination}`);
+            const publicUrl = `https://storage.googleapis.com/${bucketName}/${destination}`;
+            frames.push(publicUrl);
         }
 
         res.json({ frames });
