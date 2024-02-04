@@ -7,6 +7,7 @@ const path = require('path');
 const { Storage } = require('@google-cloud/storage');
 const storage = new Storage();
 const bucketName = 'clipdle_timeline_thumbnails';
+const uuid = require('uuid');
 
 const upload = multer({ dest: 'uploads/' });
 
@@ -17,9 +18,8 @@ router.post('/extract-frames', upload.single('video'), async (req, res) => {
 
     console.log('File uploaded:', req.file.path); // Confirm file upload
 
-    const videoPath = req.file.path;
+    const videoPath = req.file.path; // The path to the uploaded video file
     const frameNumber = req.body.frameNumber;
-    const uniqueFolder = `thumbnails_${Date.now()}`; // Create a unique folder name
 
     console.log('Extracting frames from:', videoPath);
     console.log('Requested frame number:', frameNumber);
@@ -29,6 +29,7 @@ router.post('/extract-frames', upload.single('video'), async (req, res) => {
 
     const outputDir = './extracted_frames';
     const filenamePattern = 'thumb_%04d.png';
+    const uniqueFolder = `thumbnails_${uuid.v4()};`; // Create a unique folder name
 
     if (!fs.existsSync(outputDir)) {
         console.log('Creating output directory:', outputDir);
@@ -54,7 +55,7 @@ router.post('/extract-frames', upload.single('video'), async (req, res) => {
                     console.error('FFmpeg error:', err);
                     reject(err);
                 })
-                .save(outputImagePath);
+                .save(`${uniqueFolder}/thumb_%04d.png`);
         });
 
         // After thumbnails are generated, upload them to GCS
