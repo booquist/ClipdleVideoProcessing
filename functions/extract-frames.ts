@@ -6,7 +6,7 @@ const fs = require('fs');
 
 const upload = multer({ dest: 'uploads/' });
 
-router.post('/extract-frames', async (req: { file: { path: any; }; body: { frameNumber: any; }; }, res: { status: (arg0: number) => { (): any; new(): any; send: { (arg0: string): void; new(): any; }; }; json: (arg0: { frames: string[]; }) => void; }) => {
+router.post('/extract-frames', upload.single('video'), async (req: { file: { path: any; }; body: { frameNumber: any; }; }, res: { status: (arg0: number) => { (): any; new(): any; send: { (arg0: string): void; new(): any; }; }; json: (arg0: { frames: string[]; }) => void; }) => {
     if (!req.file) {
         return res.status(400).send('No file uploaded');
     }

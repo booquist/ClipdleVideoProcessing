@@ -19,7 +19,7 @@ app.use(express.urlencoded({ limit: '150mb', extended: true })); // Increase URL
 const PORT = 3000; // 443 for HTTPS, 80 for HTTP
 
 // Use the video processing route
-app.use('/extract-frames', extractThumbnailRoute);
+app.use('/', extractThumbnailRoute);
 app.use('/upload-gcs', uploadRoute);
 
 app.listen(PORT, () => {
