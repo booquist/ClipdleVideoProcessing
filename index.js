@@ -13,6 +13,10 @@ const corsOptions = {
 
 const app = express();
 app.use(cors(corsOptions));
+app.use((err, req, res, next) => {
+    console.error(err.stack); // Log the stack trace for debugging
+    res.status(500).send('Something broke!');
+});
 app.use(express.json({ limit: '150mb' })); // Increase JSON Body limit
 app.use(express.urlencoded({ limit: '150mb', extended: true })); // Increase URL-Encoded Body limit
 

@@ -11,8 +11,7 @@ const multer = require('multer');
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-const keyFilePath = './agile-bonbon-403122-7dc5bb47ff54.json';
-const gcStorage = new Storage({ keyFilename: keyFilePath });
+const gcStorage = new Storage();
 
 const videosBucketName = 'clipdle_temp_videos';
 const imagesBucketName = 'clipdle-profile-pics';
