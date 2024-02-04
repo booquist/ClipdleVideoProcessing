@@ -16,73 +16,49 @@ router.post('/extract-frames', upload.single('video'), async (req, res) => {
         return res.status(400).send('No file uploaded');
     }
 
-    console.log('File uploaded:', req.file.path); // Confirm file upload
+    const videoPath = req.file.path;
+    const frameNumber = parseInt(req.body.frameNumber || "0", 10);
+    const uniqueFolder = `thumbnails_${uuid.v4()}`;
 
-    const videoPath = req.file.path; // The path to the uploaded video file
-    const frameNumber = req.body.frameNumber;
-
-    console.log('Extracting frames from:', videoPath);
-    console.log('Requested frame number:', frameNumber);
-
-    const FRAME_PER_SEC = 1;
-    const FRAME_WIDTH = 80;
-
-    const outputDir = './extracted_frames';
-    const filenamePattern = 'thumb_%04d.png';
-    const uniqueFolder = `thumbnails_${uuid.v4()};`; // Create a unique folder name
-
-    if (!fs.existsSync(outputDir)) {
-        console.log('Creating output directory:', outputDir);
-        fs.mkdirSync(outputDir, { recursive: true });
+    // Ensure local directory for FFmpeg output exists
+    const localOutputDir = path.join(__dirname, 'extracted_frames', uniqueFolder);
+    if (!fs.existsSync(localOutputDir)) {
+        fs.mkdirSync(localOutputDir, { recursive: true });
     }
 
-    const outputImagePath = path.join(outputDir, filenamePattern);
-    console.log('Output Image Path:', outputImagePath);
-
     try {
-        await new Promise((resolve, reject) => {
-            ffmpeg(videoPath) // Use the path of the uploaded file
-                .inputOptions('-ss 0')
-                .outputOptions([
-                    `-vf fps=${FRAME_PER_SEC}/1:round=up,scale=${FRAME_WIDTH}:-2`,
-                    `-vframes ${frameNumber}`
-                ])
-                .on('end', () => {
-                    console.log('FFmpeg processing finished');
-                    resolve();
-                })
-                .on('error', (err) => {
-                    console.error('FFmpeg error:', err);
-                    reject(err);
-                })
-                .save(`${uniqueFolder}/thumb_%04d.png`);
-        });
-
-        // After thumbnails are generated, upload them to GCS
-        const frames = [];
+        // Generate thumbnails using FFmpeg
         for (let i = 1; i <= frameNumber; i++) {
-            const filePath = `${uniqueFolder}/thumb_${String(i).padStart(4, '0')}.png`;
-            const destination = `${uniqueFolder}/thumb_${String(i).padStart(4, '0')}.png`;
+            const outputFilename = `thumb_${String(i).padStart(4, '0')}.png`;
+            const outputPath = path.join(localOutputDir, outputFilename);
 
-            // Upload file to GCS
-            await storage.bucket(bucketName).upload(filePath, { destination });
+            await new Promise((resolve, reject) => {
+                ffmpeg(videoPath)
+                    .outputOptions([
+                        `-vf select='not(mod(n\\,${Math.floor(30/FPS)}))',scale=${WIDTH}:-1`, // Adjust for FPS and WIDTH as needed
+                        `-vframes 1`
+                    ])
+                    .output(outputPath)
+                    .on('end', resolve)
+                    .on('error', reject)
+                    .run();
+            });
 
-            // Assuming public access is set up for the bucket, construct the URL
-            const publicUrl = `https://storage.googleapis.com/${bucketName}/${destination}`;
-            frames.push(publicUrl);
-        }
+            // Upload each thumbnail to GCS
+            const destination = `${uniqueFolder}/${outputFilename}`;
+            await storage.bucket(bucketName).upload(outputPath, { destination });
 
-        if (frames.length === 0) {
-            console.log('No frames were extracted');
+            // Assuming public access, construct URL for each uploaded thumbnail
+            frames.push(`https://storage.googleapis.com/${bucketName}/${destination}`);
         }
 
         res.json({ frames });
     } catch (error) {
-        console.error('Error extracting frames:', error);
-        res.status(500).send('Error extracting frames: ' + error.message);
+        console.error('Error processing video:', error);
+        res.status(500).send('Error processing video');
     } finally {
-        // Optionally, clean up local files
-        fs.rmSync(uniqueFolder, { recursive: true, force: true });
+        // Clean up local directory
+        fs.rmSync(localOutputDir, { recursive: true, force: true });
     }
 });
 
