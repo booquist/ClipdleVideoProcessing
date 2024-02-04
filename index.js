@@ -4,11 +4,19 @@ const cors = require('cors');
 const extractThumbnailRoute = require('./functions/extract-frames');
 const uploadRoute = require('./functions/upload-gcs');
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+const corsOptions = {
+    origin: '*', // or '*' to allow all origins
+    methods: ['GET', 'POST', 'OPTIONS'], // methods allowed
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  };
+  
 
-const PORT = 443; // 443 for HTTPS, 80 for HTTP
+const app = express();
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '150mb' })); // Increase JSON Body limit
+app.use(express.urlencoded({ limit: '150mb', extended: true })); // Increase URL-Encoded Body limit
+
+const PORT = 3000; // 443 for HTTPS, 80 for HTTP
 
 // Use the video processing route
 app.use('/extract-frames', extractThumbnailRoute);
