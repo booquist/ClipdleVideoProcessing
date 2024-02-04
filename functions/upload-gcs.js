@@ -5,9 +5,11 @@ const sharp = require('sharp');
 const { v4: uuidv4 } = require('uuid');
 const { exec } = require('child_process');
 const express = require('express');
+
 const router = express.Router();
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' }); // configure multer
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 const keyFilePath = './agile-bonbon-403122-7dc5bb47ff54.json';
 const gcStorage = new Storage({ keyFilename: keyFilePath });
@@ -205,13 +207,21 @@ async function createAndUploadThumbnail(videoFilePath, videoId) {
 
 // Function to handle video uploads
 async function handleVideoUpload(req, res) {
+    const file = req.file;
+
+    if (!file) {
+        return res.status(400).send('No file uploaded.');
+    }
+
     try {
-        const file = req.file; // Assuming file is passed in request
-        const response = await uploadVideoToGCS(file);
-        res.json(response);
-    } catch (error) {
-        console.error('Error in handleVideoUpload:', error);
-        res.status(500).send('Internal server error');
+        const { filename, aspectRatio } = await uploadVideoToGCS(file);
+        res.status(200).json({
+            message: 'Temporary video uploaded successfully!',
+            filename, 
+            aspectRatio
+        });
+    } catch (err) {
+        res.status(500).send('Error processing upload: ' + err.message);
     }
 }
 
