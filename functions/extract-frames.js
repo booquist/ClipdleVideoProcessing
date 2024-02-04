@@ -4,7 +4,11 @@ const multer = require('multer');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
 const path = require('path');
+const { Storage } = require('@google-cloud/storage');
+const storage = new Storage();
+const bucketName = 'clipdle_timeline_thumbnails';
 
+// Configure multer for file upload
 const upload = multer({ dest: 'uploads/' });
 
 router.post('/extract-frames', upload.single('video'), async (req, res) => {
@@ -12,37 +16,16 @@ router.post('/extract-frames', upload.single('video'), async (req, res) => {
         return res.status(400).send('No file uploaded');
     }
 
-    console.log('File uploaded:', req.file.path); // Confirm file upload
-
-    const videoPath = req.file.path; // The path to the uploaded video file
+    const videoPath = req.file.path;
     const frameNumber = req.body.frameNumber;
-
-    console.log('Extracting frames from:', videoPath);
-    console.log('Requested frame number:', frameNumber);
-
-    const FRAME_PER_SEC = 1;
-    const FRAME_WIDTH = 80;
-
-    const outputDir = './extracted_frames';
-    const filenamePattern = 'thumb_%04d.png';
-
-    if (!fs.existsSync(outputDir)) {
-        console.log('Creating output directory:', outputDir);
-        fs.mkdirSync(outputDir, { recursive: true });
-    }
-
-    const outputImagePath = path.join(outputDir, filenamePattern);
-    console.log('Output Image Path:', outputImagePath);
+    const uniqueFolder = `thumbnails_${Date.now()}`; // Create a unique folder name
 
     try {
         await new Promise((resolve, reject) => {
-            ffmpeg(videoPath) // Use the path of the uploaded file
+            ffmpeg(videoPath)
                 .inputOptions('-ss 0')
-                .outputOptions([
-                    `-vf fps=${FRAME_PER_SEC}/1:round=up,scale=${FRAME_WIDTH}:-2`,
-                    `-vframes ${frameNumber}`
-                ])
-                .on('end', () => {
+                .outputOptions([`-vf fps=1,scale=${FRAME_WIDTH}:-2`, `-vframes ${frameNumber}`])
+                .on('end', async () => {
                     console.log('FFmpeg processing finished');
                     resolve();
                 })
@@ -50,28 +33,31 @@ router.post('/extract-frames', upload.single('video'), async (req, res) => {
                     console.error('FFmpeg error:', err);
                     reject(err);
                 })
-                .save(outputImagePath);
+                .save(`${uniqueFolder}/thumb_%04d.png`);
         });
 
+        // After thumbnails are generated, upload them to GCS
         const frames = [];
         for (let i = 1; i <= frameNumber; i++) {
-            const filePath = outputImagePath.replace('%04d', String(i).padStart(4, '0'));
-            if (fs.existsSync(filePath)) {
-                console.log(`Frame ${i} exists at: ${filePath}`);
-                frames.push(filePath);
-            } else {
-                console.log(`Frame ${i} missing at: ${filePath}`);
-            }
+            const filePath = `${uniqueFolder}/thumb_${String(i).padStart(4, '0')}.png`;
+            const destination = `${uniqueFolder}/thumb_${String(i).padStart(4, '0')}.png`;
+
+            // Upload file to GCS
+            await storage.bucket(bucketName).upload(filePath, { destination });
+
+            // Assuming public access is set up for the bucket, construct the URL
+            const publicUrl = `https://storage.googleapis.com/${bucketName}/${destination}`;
+            frames.push(publicUrl);
         }
 
-        if (frames.length === 0) {
-            console.log('No frames were extracted');
-        }
-
+        // Respond with the URLs of the uploaded frames
         res.json({ frames });
     } catch (error) {
-        console.error('Error extracting frames:', error);
-        res.status(500).send('Error extracting frames: ' + error.message);
+        console.error('Error processing video:', error);
+        res.status(500).send('Error processing video: ' + error.message);
+    } finally {
+        // Optionally, clean up local files
+        fs.rmSync(uniqueFolder, { recursive: true, force: true });
     }
 });
 
