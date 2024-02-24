@@ -3,6 +3,7 @@ const cors = require('cors');
 
 const extractThumbnailRoute = require('./functions/extract-frames');
 const uploadRoute = require('./functions/upload-gcs');
+const authenticateRequest = require('./middlewares/authMiddleware');
 
 const corsOptions = {
     origin: '*', // or '*' to allow all origins
@@ -20,7 +21,10 @@ app.use((err, req, res, next) => {
 app.use(express.json({ limit: '150mb' })); // Increase JSON Body limit
 app.use(express.urlencoded({ limit: '150mb', extended: true })); // Increase URL-Encoded Body limit
 
-const PORT = 3000; // 443 for HTTPS, 80 for HTTP
+// Apply the authentication middleware to all routes
+app.use(authenticateRequest); // Leave out for local requests
+
+const PORT = process.env.PORT || 8080;
 
 // Use the video processing route
 app.use('/', extractThumbnailRoute);

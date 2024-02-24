@@ -11,9 +11,10 @@ const multer = require('multer');
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-const gcStorage = new Storage();
+const keyFilePath = './agile-bonbon-403122-7dc5bb47ff54.json';
+const gcStorage = new Storage({ keyFilename: keyFilePath });
 
-const videosBucketName = 'clipdle_temp_videos';
+const videosBucketName = 'clipdle_videos';
 const imagesBucketName = 'clipdle-profile-pics';
 const thumbnailBucketName = 'clipdle_videos_thumbnails';
 
@@ -30,13 +31,12 @@ function logFFmpegVersion() {
 }
 
 async function uploadVideoToGCS(file) {
-
-    const filename = `${Date.now()}.mp4`;
+    const filename = `${uuidv4()}.mp4`;
     const tmpFilePath = `./tmp_${filename}`; // Temporary file path for input
     const outputTmpFilePath = `./output_tmp_${filename}`; // Temporary file path for output
 
     try {
-        fs.writeFileSync(tmpFilePath, file.buffer); // Writing the buffer to a temporary file
+        await fs.promises.writeFile(tmpFilePath, file.buffer); // Asynchronously write the buffer to a temporary file
         const thumbnailFilename = await createAndUploadThumbnail(tmpFilePath, filename);
 
         const metadata = await new Promise((resolve, reject) => {
@@ -63,11 +63,10 @@ async function uploadVideoToGCS(file) {
                     '-b:v 2M',           // Set bitrate to 2 Mbps
                     '-crf 28',           // Set constant rate factor to 28
                     '-r 30',             // Set frame rate to 30 fps
-                    '-c:v libx264',      // Use H.264 codec for faster processing
+                    '-c:v h264_nvenc',   // Use Nvidia's H.264 GPU encoder
+                    '-preset fast',      // Use a faster preset, adjust based on quality and speed requirements
                     '-c:a aac',          // Use AAC for audio
                     '-b:a 128k',         // Set audio bitrate to 128 kbps
-                    '-strict -2'         // Necessary for some versions of FFmpeg
-
                 ])
                 .toFormat('mp4')
                 .on('end', resolve)
@@ -89,8 +88,8 @@ async function uploadVideoToGCS(file) {
         throw err; // Rethrow the error to be handled by the caller
     } finally {
         // Clean up temporary files
-        if (fs.existsSync(tmpFilePath)) fs.unlinkSync(tmpFilePath);
-        if (fs.existsSync(outputTmpFilePath)) fs.unlinkSync(outputTmpFilePath);
+        if (fs.existsSync(tmpFilePath)) await fs.promises.unlink(tmpFilePath);
+        if (fs.existsSync(outputTmpFilePath)) await fs.promises.unlink(outputTmpFilePath);
     }
 }
 
@@ -238,7 +237,7 @@ async function handleProfilePictureUpload(req, res) {
 }
 
 // Define your routes
-router.post('/upload-video', upload.single('video'), handleVideoUpload);
+router.post('/upload-video', upload.single('file'), handleVideoUpload);
 router.post('/upload-profile-picture', handleProfilePictureUpload);
 
 // Export the router

@@ -5,7 +5,8 @@ const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
 const path = require('path');
 const { Storage } = require('@google-cloud/storage');
-const storage = new Storage();
+const keyFilePath = './agile-bonbon-403122-7dc5bb47ff54.json';
+const gcStorage = new Storage({ keyFilename: keyFilePath });
 const bucketName = 'clipdle_timeline_thumbnails';
 const uuid = require('uuid');
 
@@ -56,7 +57,7 @@ router.post('/extract-frames', upload.single('video'), async (req, res) => {
             });
 
             // Upload the thumbnail to GCS
-            await storage.bucket(bucketName).upload(outputPath, {
+            await gcStorage.bucket(bucketName).upload(outputPath, {
                 destination: `${uniqueFolder}/${outputFilename}`,
             });
 
